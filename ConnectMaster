@@ -1,0 +1,66 @@
+local ConnectionsMeta = {}
+ConnectionsMeta.Groups = {}
+ConnectionsMeta.__index = ConnectionsMeta
+
+function ConnectionsMeta.NewGroup(identifier, existingConnections) --Creates a new "Table" with Connections being the metatable
+	local proxy = {}
+	proxy.Connections = {} --Create table to hold connections
+	
+	if not identifier then --Verify there is an identifying object
+		warn("Attempt to create Connection group with no identifier")
+		return
+	elseif ConnectionsMeta.Groups[identifier] ~= nil then --Verify there is a unique identifier cuz non unique is no bueno
+		print(ConnectionsMeta.Groups[identifier])
+		warn("Attempt to create Connection group without unique identifier", identifier)
+		return
+	end
+	
+	proxy.Identifier = identifier --Label the proxy with the identifier
+	ConnectionsMeta.Groups[identifier] = proxy --Add the proxy to the connection groups
+	
+	if existingConnections then --Add any included connections
+		for i = 1, #existingConnections do
+			proxy.Connections[i] = existingConnections[i]
+		end
+	end
+	
+	setmetatable(proxy, ConnectionsMeta) --Set Connections as the metatable for the proxy
+	
+	return proxy
+end
+
+function ConnectionsMeta:AddConnection(connection)
+	if table.find(self.Connections, connection) then
+		warn("Duplicate connection entry attempt")
+		return
+	end
+	
+	table.insert(self.Connections, connection)
+end
+
+function ConnectionsMeta:RemoveConnection(connection)
+	local occurence = table.find(self.Connections, connection)
+	if occurence then
+		table.remove(self.Connections, occurence)
+	else
+		warn("Connection not found")
+	end
+end
+
+function ConnectionsMeta:Disconnect()
+	for i, connectionEntry in pairs(self.Connections) do
+		connectionEntry:Disconnect()
+		table.remove(self.Connections, i)
+	end
+end
+
+function ConnectionsMeta:Destroy()
+	ConnectionsMeta.Groups[self.Identifier] = nil
+	self:Disconnect()
+end
+
+function ConnectionsMeta:GetGroupByIdentifier(identifier)
+	return ConnectionsMeta.Groups[identifier]
+end
+
+return ConnectionsMeta
